@@ -1,0 +1,839 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>A Plus Family HealthCare - V5 Interactive Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg-gradient: #f8fafc;
+        --clinic-window-open: #fde047;
+        --clinic-window-closed: #374151;
+      }
+      body {
+        font-family: "Inter", sans-serif;
+        background: var(--bg-gradient);
+        transition: background 0.8s ease;
+        overflow-x: hidden;
+      }
+      .sky-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: -2;
+        overflow: hidden;
+      }
+      #sun,
+      #moon {
+        position: absolute;
+        font-size: 4rem;
+        will-change: transform;
+        transition: opacity 0.5s ease;
+        cursor: grab;
+        pointer-events: auto;
+      }
+      #sun:active,
+      #moon:active {
+        cursor: grabbing;
+      }
+      .horizon {
+        position: fixed;
+        bottom: -50px;
+        left: -5%;
+        width: 110%;
+        height: 100px;
+        background: #0f172a;
+        border-radius: 50% / 100%;
+        border-top-left-radius: 0;
+        border-top-right-radius: 0;
+        z-index: -1;
+        transition: background-color 0.8s ease;
+      }
+      .scenery-container {
+        position: fixed;
+        bottom: 10px;
+        left: 0;
+        width: 100%;
+        height: 150px;
+        display: flex;
+        justify-content: space-around;
+        align-items: flex-end;
+        z-index: 0;
+        pointer-events: none;
+      }
+      .clinic {
+        text-align: center;
+        color: white;
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+      }
+      .clinic-label {
+        font-weight: 600;
+        font-size: 0.875rem;
+        margin-top: 4px;
+      }
+      .clinic-building .window {
+        fill: var(--clinic-window-closed);
+        transition: fill 0.5s ease;
+      }
+      .clinic-building.open .window {
+        fill: var(--clinic-window-open);
+        filter: drop-shadow(0 0 4px var(--clinic-window-open));
+      }
+      .star,
+      .cloud {
+        position: fixed;
+        z-index: -3;
+        background-color: white;
+        border-radius: 50%;
+      }
+      .cloud {
+        background: white;
+        border-radius: 20px;
+        opacity: 0.2;
+        animation: drift 60s linear infinite;
+      }
+      @keyframes drift {
+        from {
+          transform: translateX(-200px);
+        }
+        to {
+          transform: translateX(100vw);
+        }
+      }
+      .clock-face {
+        fill: white;
+        stroke: #e2e8f0;
+        stroke-width: 4;
+        cursor: pointer;
+      }
+      .clock-center {
+        fill: #4f46e5;
+      }
+      .hand-hour {
+        stroke: #1e293b;
+        stroke-width: 6;
+        stroke-linecap: round;
+        pointer-events: none;
+      }
+      .hand-minute {
+        stroke: #64748b;
+        stroke-width: 4;
+        stroke-linecap: round;
+        pointer-events: none;
+      }
+      .tick {
+        stroke: #cbd5e1;
+        stroke-width: 2;
+      }
+      .tick-main {
+        stroke: #94a3b8;
+        stroke-width: 3;
+      }
+      .status-card {
+        transition: all 0.3s ease;
+      }
+      .status-active {
+        border-color: #10b981;
+        background-color: #f0fdf4;
+      }
+      .status-closed {
+        border-color: #cbd5e1;
+        background-color: #f8fafc;
+        opacity: 0.8;
+      }
+      .no-select {
+        user-select: none;
+        -webkit-user-select: none;
+      }
+      .glass-panel {
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+      }
+      input[type="range"] {
+        -webkit-appearance: none;
+        background: transparent;
+      }
+      input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        height: 16px;
+        width: 16px;
+        border-radius: 50%;
+        background: #4f46e5;
+        cursor: pointer;
+        margin-top: -6px;
+      }
+      input[type="range"]::-webkit-slider-runnable-track {
+        width: 100%;
+        height: 4px;
+        cursor: pointer;
+        background: #cbd5e1;
+        border-radius: 2px;
+      }
+    </style>
+  </head>
+  <body class="min-h-screen p-4 md:p-8 no-select">
+    <div class="sky-container">
+      <div id="stars"></div>
+      <div id="clouds"></div>
+      <div id="sun">☀️</div>
+      <div id="moon">🌙</div>
+    </div>
+    <div class="horizon" id="horizon-element"></div>
+
+    <div class="scenery-container">
+      <div id="clinic-br" class="clinic">
+        <svg class="clinic-building" width="80" height="100" viewBox="0 0 80 100">
+          <path d="M0 100h80v-70l-40-30-40 30z" fill="#475569" />
+          <path
+            class="window"
+            d="M10 40h20v15h-20z M50 40h20v15h-20z M10 65h20v15h-20z M50 65h20v15h-20z"
+          />
+        </svg>
+        <div class="clinic-label">Brownsville</div>
+      </div>
+      <div id="clinic-so" class="clinic">
+        <svg class="clinic-building" width="80" height="100" viewBox="0 0 80 100">
+          <path d="M0 100h80v-70l-40-30-40 30z" fill="#475569" />
+          <path
+            class="window"
+            d="M10 40h20v15h-20z M50 40h20v15h-20z M10 65h20v15h-20z M50 65h20v15h-20z"
+          />
+        </svg>
+        <div class="clinic-label">Sonora</div>
+      </div>
+      <div id="clinic-et" class="clinic">
+        <svg class="clinic-building" width="80" height="100" viewBox="0 0 80 100">
+          <path d="M0 100h80v-70l-40-30-40 30z" fill="#475569" />
+          <path
+            class="window"
+            d="M10 40h20v15h-20z M50 40h20v15h-20z M10 65h20v15h-20z M50 65h20v15h-20z"
+          />
+        </svg>
+        <div class="clinic-label">E-Town</div>
+      </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto space-y-6 relative z-10">
+      <div
+        class="glass-panel rounded-xl shadow-lg border border-slate-200 p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
+      >
+        <div>
+          <h1 class="text-2xl font-bold text-slate-800">
+            PBX Network Visualizer (V5 Site-Only Model)
+          </h1>
+          <p class="text-slate-600 mt-1 text-sm">
+            Use Play, drag the clock, or move the sun/moon to change the time.
+            Each clinic opens and closes on its own hours. A closed clinic's
+            calls go to After-Hours, even if another clinic is open.
+          </p>
+        </div>
+        <div class="flex flex-col gap-2 items-end">
+          <div
+            class="flex items-center gap-3 bg-white p-2 rounded-lg border border-slate-200 shadow-sm"
+          >
+            <button
+              id="play-pause-btn"
+              class="w-8 h-8 flex items-center justify-center rounded-full bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-colors font-bold text-lg"
+            >
+              ❚❚
+            </button>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-semibold text-slate-500">SPEED</span>
+              <input
+                type="range"
+                id="speed-slider"
+                min="10"
+                max="1000"
+                value="60"
+                class="w-24"
+              />
+            </div>
+          </div>
+          <div class="flex bg-slate-200/50 p-1 rounded-lg w-fit">
+            <button id="btn-reg" onclick="setDay('reg')"></button>
+            <button id="btn-wed" onclick="setDay('wed')"></button>
+            <button id="btn-weekend" onclick="setDay('weekend')"></button>
+          </div>
+          <div class="flex bg-slate-200/50 p-1 rounded-lg w-fit">
+            <button id="btn-staging" onclick="setMode('staging')"></button>
+            <button id="btn-production" onclick="setMode('production')"></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div
+          class="lg:col-span-4 glass-panel rounded-xl shadow-lg border border-slate-200 p-6 flex flex-col items-center"
+        >
+          <h2
+            class="text-lg font-bold text-slate-800 w-full border-b border-slate-200 pb-2 mb-6"
+          >
+            1. Master Clock (Central Time)
+          </h2>
+          <div class="relative">
+            <svg
+              id="clock-svg"
+              width="240"
+              height="240"
+              viewBox="0 0 240 240"
+              class="touch-none drop-shadow-md"
+            >
+              <circle cx="120" cy="120" r="110" class="clock-face"></circle>
+              <g id="clock-ticks"></g>
+              <line id="hand-minute" x1="120" y1="120" x2="120" y2="40" class="hand-minute"></line>
+              <line id="hand-hour" x1="120" y1="120" x2="120" y2="60" class="hand-hour"></line>
+              <circle cx="120" cy="120" r="6" class="clock-center"></circle>
+            </svg>
+          </div>
+          <div class="mt-6 flex items-center justify-center gap-4">
+            <div
+              class="text-3xl font-bold text-slate-800 tabular-nums tracking-tight"
+              id="digital-time"
+            >
+              08:00
+            </div>
+            <button
+              onclick="toggleAmPm()"
+              id="ampm-btn"
+              class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-bold py-1.5 px-3 rounded-lg transition-colors shadow-sm"
+            >
+              AM
+            </button>
+          </div>
+        </div>
+
+        <div class="lg:col-span-4 flex flex-col gap-4">
+          <div
+            class="glass-panel rounded-xl shadow-lg border border-slate-200 p-4 text-center"
+          >
+            <h2
+              class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-1"
+            >
+              Clinics Answering Now
+            </h2>
+            <div id="network-status" class="text-xl font-bold text-emerald-600">
+              -
+            </div>
+          </div>
+          <div
+            id="card-br"
+            class="status-card border-2 rounded-xl p-4 flex justify-between items-center glass-panel shadow-sm"
+          >
+            <div>
+              <h3 class="font-bold text-slate-800">Brownsville</h3>
+              <div id="time-br" class="text-sm font-medium text-slate-500"></div>
+              <div class="text-[11px] text-slate-400">
+                M/T/Th/F 8-5 CT, Wed 7-4 CT
+              </div>
+            </div>
+            <div id="badge-br"></div>
+          </div>
+          <div
+            id="card-so"
+            class="status-card border-2 rounded-xl p-4 flex justify-between items-center glass-panel shadow-sm"
+          >
+            <div>
+              <h3 class="font-bold text-slate-800">Sonora</h3>
+              <div id="time-so" class="text-sm font-medium text-slate-500"></div>
+              <div class="text-[11px] text-slate-400">Mon-Fri 8-5 ET</div>
+            </div>
+            <div id="badge-so"></div>
+          </div>
+          <div
+            id="card-et"
+            class="status-card border-2 rounded-xl p-4 flex justify-between items-center glass-panel shadow-sm"
+          >
+            <div>
+              <h3 class="font-bold text-slate-800">Elizabethtown</h3>
+              <div id="time-et" class="text-sm font-medium text-slate-500"></div>
+              <div class="text-[11px] text-slate-400">Mon-Fri 8-5 ET</div>
+            </div>
+            <div id="badge-et"></div>
+          </div>
+        </div>
+
+        <div
+          class="lg:col-span-4 glass-panel rounded-xl shadow-lg border border-slate-200 p-6 flex flex-col"
+        >
+          <h2
+            class="text-lg font-bold text-slate-800 border-b border-slate-200 pb-2 mb-4"
+          >
+            3. Test Active Routing
+          </h2>
+          <div class="space-y-2 mb-6">
+            <button
+              onclick="simulateCall('br')"
+              class="w-full bg-slate-100/50 hover:bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg transition-colors text-left flex justify-between border border-slate-200"
+            >
+              <span>Dial Brownsville</span>
+              <span id="dial-br" class="text-slate-500 text-sm"></span>
+            </button>
+            <button
+              onclick="simulateCall('so')"
+              class="w-full bg-slate-100/50 hover:bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg transition-colors text-left flex justify-between border border-slate-200"
+            >
+              <span>Dial Sonora</span>
+              <span id="dial-so" class="text-slate-500 text-sm"></span>
+            </button>
+            <button
+              onclick="simulateCall('et')"
+              class="w-full bg-slate-100/50 hover:bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg transition-colors text-left flex justify-between border border-slate-200"
+            >
+              <span>Dial Elizabethtown</span>
+              <span id="dial-et" class="text-slate-500 text-sm"></span>
+            </button>
+          </div>
+          <div
+            class="flex-grow bg-slate-900/95 rounded-lg p-4 font-mono text-xs overflow-y-auto max-h-[260px]"
+            id="sim-log"
+          >
+            <div class="text-slate-400">Awaiting call initiation...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const sites = {
+        br: {
+          name: "Brownsville",
+          prefix: "BR",
+          testDid: "270-982-1404",
+          liveDid: "270-975-4050",
+          route: "8910",
+          timeframe: "V5 BV Open",
+          aa: "8170",
+          queue: "8020",
+          queueName: "V5 - Brownsville",
+          primary: "101 Reception 2 Brownsville",
+          failover: "102 Autumn Simmons + 116 Regina Vessels",
+        },
+        so: {
+          name: "Sonora",
+          prefix: "SO",
+          testDid: "270-982-1405",
+          liveDid: "270-640-9868",
+          route: "8911",
+          timeframe: "V5 ET Open",
+          aa: "8171",
+          queue: "8021",
+          queueName: "V5 - Sonora",
+          primary: "202 Alana Patterson",
+          failover: "201 Tracy Riggs",
+        },
+        et: {
+          name: "Elizabethtown",
+          prefix: "ET",
+          testDid: "270-982-1406",
+          liveDid: "270-982-1400",
+          route: "8912",
+          timeframe: "V5 ET Open",
+          aa: "8172",
+          queue: "8022",
+          queueName: "V5 - Elizabethtown",
+          primary: "302 Chelsey Marcum",
+          failover: "301 Cameron Latham",
+        },
+      };
+
+      // Scenery
+      const starsContainer = document.getElementById("stars");
+      const cloudsContainer = document.getElementById("clouds");
+      for (let i = 0; i < 100; i++) {
+        const star = document.createElement("div");
+        star.className = "star";
+        star.style.width = `${Math.random() * 2}px`;
+        star.style.height = star.style.width;
+        star.style.left = `${Math.random() * 100}vw`;
+        star.style.top = `${Math.random() * 80}vh`;
+        star.style.opacity = `${Math.random() * 0.5 + 0.2}`;
+        starsContainer.appendChild(star);
+      }
+      for (let i = 0; i < 10; i++) {
+        const cloud = document.createElement("div");
+        cloud.className = "cloud";
+        cloud.style.width = `${Math.random() * 100 + 50}px`;
+        cloud.style.height = `${Math.random() * 30 + 20}px`;
+        cloud.style.left = `${Math.random() * 100}vw`;
+        cloud.style.top = `${Math.random() * 60}vh`;
+        cloud.style.animationDuration = `${Math.random() * 80 + 40}s`;
+        cloud.style.animationDelay = `-${Math.random() * 120}s`;
+        cloudsContainer.appendChild(cloud);
+      }
+
+      // Time & state
+      let currentDay = "reg";
+      let currentMode = "staging";
+      let totalCtMinutes = 8 * 60;
+      let isPlaying = true;
+      let timeMultiplier = 60;
+      let lastFrameTime = performance.now();
+
+      const playPauseBtn = document.getElementById("play-pause-btn");
+      const speedSlider = document.getElementById("speed-slider");
+      playPauseBtn.addEventListener("click", () => {
+        isPlaying = !isPlaying;
+        playPauseBtn.textContent = isPlaying ? "❚❚" : "►";
+        lastFrameTime = performance.now();
+      });
+      speedSlider.addEventListener("input", (e) => {
+        timeMultiplier = parseInt(e.target.value, 10);
+      });
+
+      // Clock ticks
+      const ticksGroup = document.getElementById("clock-ticks");
+      for (let i = 0; i < 60; i++) {
+        const isHour = i % 5 === 0;
+        const angle = i * 6 * (Math.PI / 180);
+        const r1 = isHour ? 95 : 102;
+        const r2 = 108;
+        const line = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "line",
+        );
+        line.setAttribute("x1", 120 + r1 * Math.sin(angle));
+        line.setAttribute("y1", 120 - r1 * Math.cos(angle));
+        line.setAttribute("x2", 120 + r2 * Math.sin(angle));
+        line.setAttribute("y2", 120 - r2 * Math.cos(angle));
+        line.setAttribute("class", isHour ? "tick-main" : "tick");
+        ticksGroup.appendChild(line);
+      }
+
+      // Clock and sky interaction
+      const clockSvg = document.getElementById("clock-svg");
+      const sun = document.getElementById("sun");
+      const moon = document.getElementById("moon");
+      let isDragging = false;
+      let lastAngle = null;
+
+      function getAngle(e) {
+        const rect = clockSvg.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        const x = clientX - rect.left - rect.width / 2;
+        const y = clientY - rect.top - rect.height / 2;
+        let angle = Math.atan2(y, x) + Math.PI / 2;
+        if (angle < 0) angle += 2 * Math.PI;
+        return angle;
+      }
+      function startClockDrag(e) {
+        isDragging = true;
+        if (isPlaying) playPauseBtn.click();
+        lastAngle = getAngle(e);
+        updateFromClockDrag(e);
+      }
+      function doClockDrag(e) {
+        if (!isDragging) return;
+        e.preventDefault();
+        updateFromClockDrag(e);
+      }
+      function stopDrag() {
+        isDragging = false;
+        lastAngle = null;
+      }
+      function updateFromClockDrag(e) {
+        const currentAngle = getAngle(e);
+        let isPm = totalCtMinutes >= 12 * 60;
+        if (lastAngle !== null) {
+          const diff = currentAngle - lastAngle;
+          if (diff > Math.PI || diff < -Math.PI) isPm = !isPm;
+        }
+        lastAngle = currentAngle;
+        const hoursPart = (currentAngle / (2 * Math.PI)) * 12;
+        let newHr = Math.floor(hoursPart);
+        const newMin = Math.floor((hoursPart % 1) * 60);
+        if (isPm && newHr !== 12) newHr += 12;
+        else if (!isPm && newHr === 12) newHr = 0;
+        totalCtMinutes = newHr * 60 + newMin;
+        updateSystem();
+      }
+      function handleCelestialDrag(e) {
+        if (!isDragging) return;
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const percentX = Math.max(0, Math.min(1, clientX / window.innerWidth));
+        const sunrise = 6 * 60,
+          sunset = 19 * 60;
+        const isPm = totalCtMinutes >= 12 * 60;
+        const draggingDay =
+          e.target.id === "sun" || (e.target.id === "" && !isPm);
+        if (draggingDay) {
+          totalCtMinutes = sunrise + percentX * (sunset - sunrise);
+        } else {
+          totalCtMinutes = sunset + percentX * (24 * 60 - (sunset - sunrise));
+          if (totalCtMinutes >= 24 * 60) totalCtMinutes -= 24 * 60;
+        }
+        updateSystem();
+      }
+
+      clockSvg.addEventListener("mousedown", startClockDrag);
+      document.addEventListener("mousemove", (e) => {
+        if (isDragging && e.target.id !== "sun" && e.target.id !== "moon")
+          doClockDrag(e);
+      });
+      [sun, moon].forEach((el) => {
+        el.addEventListener("mousedown", (e) => {
+          if (isPlaying) playPauseBtn.click();
+          isDragging = true;
+          handleCelestialDrag(e);
+          const celestialMove = (ev) => {
+            if (isDragging) handleCelestialDrag(ev);
+          };
+          document.addEventListener("mousemove", celestialMove);
+          document.addEventListener(
+            "mouseup",
+            () => {
+              stopDrag();
+              document.removeEventListener("mousemove", celestialMove);
+            },
+            { once: true },
+          );
+        });
+      });
+      document.addEventListener("mouseup", stopDrag);
+      clockSvg.addEventListener("touchstart", startClockDrag, {
+        passive: false,
+      });
+      document.addEventListener(
+        "touchmove",
+        (e) => {
+          if (isDragging) doClockDrag(e);
+        },
+        { passive: false },
+      );
+      document.addEventListener("touchend", stopDrag);
+
+      function toggleAmPm() {
+        totalCtMinutes = (totalCtMinutes + 12 * 60) % 1440;
+        updateSystem();
+      }
+
+      const ON_CLASS =
+        "px-4 py-2 text-sm font-semibold rounded-md shadow-sm bg-white text-indigo-700";
+      const OFF_CLASS =
+        "px-4 py-2 text-sm font-semibold rounded-md text-slate-700 hover:text-slate-900 transition";
+
+      function renderToggles() {
+        const dayLabels = { reg: "Mon/Tue/Thu/Fri", wed: "Wednesday", weekend: "Sat/Sun" };
+        Object.entries(dayLabels).forEach(([key, label]) => {
+          const btn = document.getElementById(`btn-${key}`);
+          btn.textContent = label;
+          btn.className = currentDay === key ? ON_CLASS : OFF_CLASS;
+        });
+        const modeLabels = { staging: "Staging (Test DIDs)", production: "Production (Listed DIDs)" };
+        Object.entries(modeLabels).forEach(([key, label]) => {
+          const btn = document.getElementById(`btn-${key}`);
+          btn.textContent = label;
+          btn.className = currentMode === key ? ON_CLASS : OFF_CLASS;
+        });
+        Object.keys(sites).forEach((k) => {
+          document.getElementById(`dial-${k}`).textContent =
+            currentMode === "staging" ? sites[k].testDid : sites[k].liveDid;
+        });
+      }
+
+      function setDay(day) {
+        currentDay = day;
+        renderToggles();
+        updateSystem();
+      }
+      function setMode(mode) {
+        currentMode = mode;
+        renderToggles();
+      }
+
+      function formatTime(h, m, pm) {
+        return `${h}:${m < 10 ? "0" + m : m} ${pm ? "PM" : "AM"}`;
+      }
+
+      function siteOpen(siteKey, day, min) {
+        if (day === "weekend") return false;
+        if (siteKey === "br") {
+          const start = day === "wed" ? 7 * 60 : 8 * 60;
+          const end = day === "wed" ? 16 * 60 : 17 * 60;
+          return min >= start && min < end;
+        }
+        return min >= 7 * 60 && min < 16 * 60;
+      }
+
+      let state = { br: false, so: false, et: false };
+
+      function tick(currentTime) {
+        const delta = currentTime - lastFrameTime;
+        lastFrameTime = currentTime;
+        if (isPlaying && !isDragging) {
+          totalCtMinutes += (delta / 1000) * (timeMultiplier / 60);
+          if (totalCtMinutes >= 1440) totalCtMinutes = 0;
+          updateSystem();
+        }
+        requestAnimationFrame(tick);
+      }
+
+      function updateSystem() {
+        const hr24 = Math.floor(totalCtMinutes / 60);
+        const min = Math.floor(totalCtMinutes % 60);
+        const isPm = hr24 >= 12;
+        let hr12 = hr24 % 12;
+        if (hr12 === 0) hr12 = 12;
+
+        document
+          .getElementById("hand-hour")
+          .setAttribute(
+            "transform",
+            `rotate(${((hr12 % 12) + min / 60) * 30}, 120, 120)`,
+          );
+        document
+          .getElementById("hand-minute")
+          .setAttribute("transform", `rotate(${min * 6}, 120, 120)`);
+        document.getElementById("digital-time").innerText =
+          `${hr12 < 10 ? "0" + hr12 : hr12}:${min < 10 ? "0" + min : min}`;
+        document.getElementById("ampm-btn").innerText = isPm ? "PM" : "AM";
+
+        const ctMin = Math.floor(totalCtMinutes);
+        Object.keys(sites).forEach((k) => {
+          state[k] = siteOpen(k, currentDay, ctMin);
+        });
+
+        updateDashboard(totalCtMinutes, hr12, min, isPm);
+        updateSky(totalCtMinutes);
+      }
+
+      function updateDashboard(ctMinutes, ctHr12, ctMin, ctPm) {
+        const openNames = Object.keys(sites)
+          .filter((k) => state[k])
+          .map((k) => sites[k].name);
+        const netEl = document.getElementById("network-status");
+        if (openNames.length === 3) {
+          netEl.innerText = "All 3 clinics open";
+          netEl.className = "text-xl font-bold text-emerald-600";
+        } else if (openNames.length > 0) {
+          netEl.innerText = `Open: ${openNames.join(", ")}`;
+          netEl.className = "text-lg font-bold text-amber-600";
+        } else {
+          netEl.innerText = "All closed (After-Hours)";
+          netEl.className = "text-xl font-bold text-rose-500";
+        }
+
+        const etMinutes = (ctMinutes + 60) % 1440;
+        const etHr = Math.floor(etMinutes / 60);
+        const etMin = Math.floor(etMinutes % 60);
+        let etHr12 = etHr % 12;
+        if (etHr12 === 0) etHr12 = 12;
+
+        document.getElementById("time-br").innerText =
+          `${formatTime(ctHr12, ctMin, ctPm)} CT`;
+        document.getElementById("time-so").innerText =
+          `${formatTime(etHr12, etMin, etHr >= 12)} ET`;
+        document.getElementById("time-et").innerText =
+          `${formatTime(etHr12, etMin, etHr >= 12)} ET`;
+
+        Object.keys(sites).forEach((k) => {
+          updateCard(k, state[k]);
+          document
+            .getElementById(`clinic-${k}`)
+            .querySelector(".clinic-building")
+            .classList.toggle("open", state[k]);
+        });
+      }
+
+      function updateCard(site, isOpen) {
+        const card = document.getElementById(`card-${site}`);
+        const badge = document.getElementById(`badge-${site}`);
+        if (isOpen) {
+          card.className =
+            "status-card border-2 rounded-xl p-4 flex justify-between items-center status-active glass-panel shadow-sm";
+          badge.className =
+            "px-3 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 uppercase tracking-wider text-center";
+          badge.innerText = "Open";
+        } else {
+          card.className =
+            "status-card border-2 rounded-xl p-4 flex justify-between items-center status-closed glass-panel shadow-sm";
+          badge.className =
+            "px-3 py-1 rounded-full text-[10px] font-bold bg-slate-200 text-slate-600 uppercase tracking-wider text-center";
+          badge.innerText = "Closed: After-Hours";
+        }
+      }
+
+      function updateSky(ctMinutes) {
+        const sunrise = 6 * 60,
+          sunset = 19 * 60;
+        const isDay = ctMinutes >= sunrise && ctMinutes < sunset;
+        sun.style.opacity = isDay ? "1" : "0";
+        moon.style.opacity = isDay ? "0" : "1";
+        starsContainer.style.opacity = isDay ? "0" : "1";
+        cloudsContainer.style.opacity = isDay ? "1" : "0";
+
+        const progress = isDay
+          ? (ctMinutes - sunrise) / (sunset - sunrise)
+          : (ctMinutes >= sunset
+              ? ctMinutes - sunset
+              : ctMinutes + 24 * 60 - sunset) /
+            (24 * 60 - (sunset - sunrise));
+        const angle = progress * Math.PI;
+        const x = 50 - 55 * Math.cos(angle);
+        const y = 90 - 80 * Math.sin(angle);
+        sun.style.transform = `translate(${x}vw, ${y}vh) translate(-50%, -50%)`;
+        moon.style.transform = `translate(${x}vw, ${y}vh) translate(-50%, -50%)`;
+
+        const transition = 60;
+        let gradient, horizonColor;
+        if (ctMinutes > sunrise - transition && ctMinutes < sunrise + transition) {
+          const p = (ctMinutes - (sunrise - transition)) / (transition * 2);
+          gradient = `linear-gradient(to top, #f39c12 ${p * -20}%, #f1c40f ${p * 30}%, #3498db ${p * 100}%, #2c3e50 100%)`;
+          horizonColor = "#1e293b";
+        } else if (ctMinutes > sunset - transition && ctMinutes < sunset + transition) {
+          const p = (ctMinutes - (sunset - transition)) / (transition * 2);
+          gradient = `linear-gradient(to top, #e74c3c ${p * -20}%, #f39c12 ${p * 30}%, #3498db ${100 - p * 50}%, #2c3e50 100%)`;
+          horizonColor = "#1e293b";
+        } else if (ctMinutes >= sunrise + transition && ctMinutes <= sunset - transition) {
+          gradient = "linear-gradient(to top, #87CEEB, #3498db)";
+          horizonColor = "#334155";
+        } else {
+          gradient = "linear-gradient(to top, #0f172a, #1e293b)";
+          horizonColor = "#020617";
+        }
+        document.documentElement.style.setProperty("--bg-gradient", gradient);
+        document.getElementById("horizon-element").style.backgroundColor =
+          horizonColor;
+      }
+
+      function simulateCall(key) {
+        const s = sites[key];
+        const did = currentMode === "staging" ? s.testDid : s.liveDid;
+        const prefix = currentMode === "staging" ? "TEST-" : `${s.prefix}-`;
+        let log = `<div class="text-sky-400 mb-2">> Inbound call to ${s.name} (${did})</div>`;
+        log += `<div class="text-fuchsia-400">> Route user ${s.route} checks "${s.timeframe}"</div>`;
+
+        if (!state[key]) {
+          log += `<div class="text-rose-400">> ${s.name} closed. Default rule: User 8903 (Main Routing User).</div>`;
+          log += `<div class="text-fuchsia-400">> 8903 forwards to After-Hours AA (8163)</div>`;
+          log += `<div class="text-amber-400 font-bold mt-2">> Result: After-hours menu. Press 1 reaches the on-call provider.</div>`;
+          const openOthers = Object.keys(sites).filter((k) => k !== key && state[k]);
+          if (openOthers.length > 0) {
+            log += `<div class="text-slate-400 mt-2">> Note: ${openOthers.map((k) => sites[k].name).join(", ")} open, but V5 does not send calls to other clinics.</div>`;
+          }
+        } else {
+          log += `<div class="text-emerald-400">> ${s.name} open. Forward Always to AA ${s.aa}.</div>`;
+          log += `<div class="text-fuchsia-400">> Menu (4 refill / 5 info / stay on line) all end in ${s.queueName} (${s.queue})</div>`;
+          log += `<div class="text-indigo-300 font-bold">> Caller ID shown to staff: ${prefix}...</div>`;
+          log += `<div class="text-amber-400 font-bold mt-2 bg-amber-400/10 p-2 rounded border border-amber-400/20">> Order 1 rings 90s: ${s.primary}</div>`;
+          log += `<div class="text-amber-400 font-bold mt-2 bg-amber-400/10 p-2 rounded border border-amber-400/20">> Then adds Order 2: ${s.failover}</div>`;
+          log += `<div class="text-slate-400 mt-2">> If still unanswered: caller stays in queue. No voicemail, no other clinic.</div>`;
+        }
+        document.getElementById("sim-log").innerHTML = log;
+      }
+
+      renderToggles();
+      updateSystem();
+      requestAnimationFrame(tick);
+    </script>
+  </body>
+</html>

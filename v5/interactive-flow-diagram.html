@@ -1,0 +1,810 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>A Plus Family HealthCare - Interactive Call Flow Diagram V5</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+      }
+      .flow-node {
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .flow-node.inactive {
+        opacity: 0.35;
+        filter: grayscale(100%);
+        pointer-events: none;
+      }
+      .flow-node.highlighted,
+      .flow-node.node-available {
+        pointer-events: auto;
+      }
+      .flow-node.highlighted {
+        opacity: 1;
+        filter: drop-shadow(0 0 12px rgba(79, 70, 229, 0.3));
+      }
+      .flow-node.node-available {
+        opacity: 0.85;
+      }
+      .node-bg {
+        fill: white;
+        stroke: #cbd5e1;
+        stroke-width: 2;
+        transition: all 0.4s ease;
+      }
+      .flow-node.highlighted .node-bg {
+        stroke: #4f46e5;
+        stroke-width: 2.5;
+        fill: #eef2ff;
+      }
+      .flow-node.node-available .node-bg {
+        stroke: #818cf8;
+        stroke-dasharray: 6, 4;
+        stroke-width: 2.5;
+        fill: #f8fafc;
+      }
+      .node-icon {
+        fill: #6366f1;
+      }
+      .node-title {
+        fill: #1e293b;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .node-title.menu-title {
+        font-size: 12px;
+      }
+      .node-subtitle {
+        fill: #64748b;
+        font-size: 11px;
+      }
+      .node-subtitle.menu-subtitle {
+        font-size: 10px;
+      }
+      .destination-sub {
+        font-size: 10px;
+      }
+      .flow-connector {
+        fill: none;
+        transition:
+          stroke 0.4s ease-in-out,
+          stroke-width 0.4s ease-in-out,
+          opacity 0.4s ease-in-out;
+      }
+      .flow-connector.inactive {
+        stroke: #e2e8f0;
+        stroke-width: 2;
+        opacity: 0.6;
+        marker-end: url(#arrow-inactive);
+      }
+      .flow-connector.highlighted {
+        stroke: #4f46e5;
+        stroke-width: 3.5;
+        opacity: 1;
+        marker-end: url(#arrow-active);
+      }
+      .flow-connector.connector-available {
+        stroke: #818cf8;
+        stroke-width: 2.5;
+        stroke-dasharray: 6, 6;
+        opacity: 0.9;
+        marker-end: url(#arrow-available);
+      }
+      .scenario-button {
+        transition: all 0.2s ease-in-out;
+      }
+      .scenario-button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      }
+      .scenario-button.active {
+        background-color: #4f46e5;
+        color: white;
+        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+      }
+      @keyframes pulse-highlight {
+        0%,
+        100% {
+          filter: drop-shadow(0 0 4px rgba(79, 70, 229, 0.4));
+        }
+        50% {
+          filter: drop-shadow(0 0 14px rgba(79, 70, 229, 0.8));
+        }
+      }
+      .pulse-highlight {
+        animation: pulse-highlight 2s ease-in-out infinite;
+      }
+    </style>
+  </head>
+  <body class="bg-slate-50 min-h-screen">
+    <div class="w-full max-w-none mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <div class="bg-white shadow-sm border border-slate-200 rounded-xl p-6">
+        <h1 class="text-2xl font-bold text-slate-800">
+          A Plus Family HealthCare - Call Routing (V5 Site-Only Model)
+        </h1>
+        <p class="text-slate-600 mt-2 text-sm leading-relaxed">
+          <strong>Site-only routing:</strong> Each number goes to its own
+          inbound route user (8910, 8911, 8912). That user checks the clinic's
+          own time frame. If the clinic is open, the call goes to that clinic's
+          auto attendant and queue, and only that clinic's phones ring. If it is
+          closed, the call goes to Main Routing User 8903 and then After-Hours
+          AA 8163.<br />
+          <strong>Ring order:</strong> Order 1 primary rings for 90 seconds,
+          then the Order 2 failover group is added. No voicemail; unanswered
+          callers stay in the queue.<br />
+          <strong>Hours:</strong> Brownsville Mon/Tue/Thu/Fri 8 AM - 5 PM CT,
+          Wed 7 AM - 4 PM CT. Sonora and Elizabethtown Mon-Fri 8 AM - 5 PM ET
+          (7 AM - 4 PM CT). No lunch closure.
+        </p>
+      </div>
+
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <div
+          class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4"
+        >
+          <h2 class="text-lg font-semibold text-slate-800">
+            1. Build Your Scenario
+          </h2>
+          <div class="flex bg-slate-100 p-1 rounded-lg w-fit gap-1">
+            <button
+              id="mode-staging"
+              class="scenario-button px-4 py-1.5 rounded-md text-sm font-semibold text-slate-700"
+            >
+              Staging (Test DIDs)
+            </button>
+            <button
+              id="mode-production"
+              class="scenario-button px-4 py-1.5 rounded-md text-sm font-semibold text-slate-700"
+            >
+              Production (Listed DIDs)
+            </button>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div>
+            <label
+              class="block text-sm font-semibold text-slate-700 mb-2 uppercase tracking-wider"
+              >Call Origin</label
+            >
+            <div class="space-y-2">
+              <button
+                id="origin-br"
+                class="scenario-button w-full bg-slate-100 text-slate-700 py-2 px-4 rounded-lg font-medium text-left"
+              >
+                Brownsville
+              </button>
+              <button
+                id="origin-so"
+                class="scenario-button w-full bg-slate-100 text-slate-700 py-2 px-4 rounded-lg font-medium text-left"
+              >
+                Sonora
+              </button>
+              <button
+                id="origin-et"
+                class="scenario-button w-full bg-slate-100 text-slate-700 py-2 px-4 rounded-lg font-medium text-left"
+              >
+                Elizabethtown
+              </button>
+            </div>
+          </div>
+          <div>
+            <label
+              class="block text-sm font-semibold text-slate-700 mb-2 uppercase tracking-wider"
+              >Day &amp; Time (Central)</label
+            >
+            <div class="space-y-2" id="preset-list"></div>
+          </div>
+          <div>
+            <label
+              class="block text-sm font-semibold text-slate-700 mb-2 uppercase tracking-wider"
+              >Menu Selection</label
+            >
+            <div class="space-y-2">
+              <button
+                id="menu-1"
+                class="scenario-button w-full bg-slate-100 text-slate-700 py-2 px-4 rounded-lg font-medium text-left hidden"
+              >
+                Press 1 (On-Call)
+              </button>
+              <button
+                id="menu-4"
+                class="scenario-button w-full bg-slate-100 text-slate-700 py-2 px-4 rounded-lg font-medium text-left"
+              >
+                Press 4 (Refill Info)
+              </button>
+              <button
+                id="menu-5"
+                class="scenario-button w-full bg-slate-100 text-slate-700 py-2 px-4 rounded-lg font-medium text-left"
+              >
+                Press 5 (Location &amp; Hours)
+              </button>
+              <button
+                id="menu-timeout"
+                class="scenario-button w-full bg-slate-100 text-slate-700 py-2 px-4 rounded-lg font-medium text-left"
+              >
+                Hold / No Input
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div
+        class="w-full bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-slate-200"
+      >
+        <div class="flex flex-col lg:flex-row gap-8 lg:items-start">
+          <div class="w-full lg:w-80 flex-shrink-0 space-y-6">
+            <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-4">
+              <h3
+                class="font-bold text-indigo-900 mb-2 text-sm uppercase tracking-wider"
+              >
+                Live Trace
+              </h3>
+              <div
+                id="scenario-description"
+                class="text-indigo-800 text-sm space-y-3"
+              ></div>
+            </div>
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
+              <h3
+                class="font-bold text-amber-900 mb-2 text-sm uppercase tracking-wider"
+              >
+                Clinic Status &amp; Ring Order
+              </h3>
+              <div
+                id="status-description"
+                class="text-amber-800 text-sm space-y-2 font-medium"
+              ></div>
+            </div>
+          </div>
+
+          <div
+            class="w-full flex-1 min-w-0 bg-slate-50/50 rounded-xl border border-slate-100 p-2"
+          >
+            <svg
+              id="flow-diagram"
+              width="100%"
+              viewBox="0 0 1150 540"
+              preserveAspectRatio="xMidYMid meet"
+              style="display: block"
+            >
+              <defs>
+                <marker
+                  id="arrow-inactive"
+                  viewBox="0 0 10 10"
+                  refX="8"
+                  refY="5"
+                  markerWidth="5"
+                  markerHeight="5"
+                  orient="auto"
+                >
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="#cbd5e1" />
+                </marker>
+                <marker
+                  id="arrow-active"
+                  viewBox="0 0 10 10"
+                  refX="8"
+                  refY="5"
+                  markerWidth="5"
+                  markerHeight="5"
+                  orient="auto"
+                >
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="#4f46e5" />
+                </marker>
+                <marker
+                  id="arrow-available"
+                  viewBox="0 0 10 10"
+                  refX="8"
+                  refY="5"
+                  markerWidth="5"
+                  markerHeight="5"
+                  orient="auto"
+                >
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="#818cf8" />
+                </marker>
+              </defs>
+              <g id="connectors"></g>
+              <g id="nodes"></g>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let currentMode = "staging";
+      let currentOrigin = "br";
+      let currentTime = "mon-1000";
+      let currentMenuSelection = null;
+
+      const nodesGroup = document.getElementById("nodes");
+      const connectorsGroup = document.getElementById("connectors");
+      const scenarioInfo = document.getElementById("scenario-description");
+      const statusInfo = document.getElementById("status-description");
+
+      const people = {
+        101: "Reception 2 Brownsville",
+        102: "Autumn Simmons",
+        116: "Regina Vessels",
+        202: "Alana Patterson",
+        201: "Tracy Riggs",
+        302: "Chelsey Marcum",
+        301: "Cameron Latham",
+      };
+
+      const sites = {
+        br: {
+          name: "Brownsville",
+          prefix: "BR",
+          testDid: "270-982-1404",
+          liveDid: "270-975-4050",
+          route: "8910",
+          timeframe: "V5 BV Open",
+          tfHours: "8-5 CT (W 7-4)",
+          aaTitle: "V5 BV Business",
+          aa: "8170",
+          queue: "8020",
+          queueName: "V5 - Brownsville",
+          primary: ["101"],
+          failover: ["102", "116"],
+        },
+        so: {
+          name: "Sonora",
+          prefix: "SO",
+          testDid: "270-982-1405",
+          liveDid: "270-640-9868",
+          route: "8911",
+          timeframe: "V5 ET Open",
+          tfHours: "8-5 ET M-F",
+          aaTitle: "V5 SO Business",
+          aa: "8171",
+          queue: "8021",
+          queueName: "V5 - Sonora",
+          primary: ["202"],
+          failover: ["201"],
+        },
+        et: {
+          name: "Elizabethtown",
+          prefix: "ET",
+          testDid: "270-982-1406",
+          liveDid: "270-982-1400",
+          route: "8912",
+          timeframe: "V5 ET Open",
+          tfHours: "8-5 ET M-F",
+          aaTitle: "V5 ET Business",
+          aa: "8172",
+          queue: "8022",
+          queueName: "V5 - Elizabethtown",
+          primary: ["302"],
+          failover: ["301"],
+        },
+      };
+
+      const timePresets = {
+        "mon-0730": { day: "reg", min: 450, label: "Mon 7:30 AM" },
+        "mon-1000": { day: "reg", min: 600, label: "Mon 10:00 AM" },
+        "mon-1130": { day: "reg", min: 690, label: "Mon 11:30 AM" },
+        "mon-1230": { day: "reg", min: 750, label: "Mon 12:30 PM" },
+        "mon-1630": { day: "reg", min: 990, label: "Mon 4:30 PM" },
+        "wed-0730": { day: "wed", min: 450, label: "Wed 7:30 AM" },
+        "wed-1630": { day: "wed", min: 990, label: "Wed 4:30 PM" },
+        "eve-1830": { day: "reg", min: 1110, label: "Weekday 6:30 PM" },
+        weekend: { day: "weekend", min: 600, label: "Sat/Sun (any time)" },
+      };
+
+      const businessMenuOptions = {
+        "menu-4": { label: "Press 4 (Refill Info)", visible: true },
+        "menu-5": { label: "Press 5 (Location & Hours)", visible: true },
+        "menu-timeout": { label: "Hold / No Input", visible: true },
+        "menu-1": { label: "Press 1", visible: false },
+      };
+      const afterHoursMenuOptions = {
+        "menu-1": { label: "Press 1 (On-Call)", visible: true },
+        "menu-timeout": { label: "Hold / No Input (repeats menu)", visible: true },
+        "menu-4": { label: "Press 4", visible: false },
+        "menu-5": { label: "Press 5", visible: false },
+      };
+
+      const X_IN = 10,
+        W_STD = 160;
+      const X_RT = 200;
+      const X_TF = 390;
+      const X_AA = 600,
+        W_MENU = 200;
+      const X_DEST = 840,
+        W_DEST = 300;
+      const ROWS = { br: 80, so: 180, et: 280 };
+      const Y_ROW4 = 380,
+        Y_ROW5 = 480;
+
+      function siteOpen(siteKey, day, min) {
+        if (day === "weekend") return false;
+        if (siteKey === "br") {
+          const start = day === "wed" ? 7 * 60 : 8 * 60;
+          const end = day === "wed" ? 16 * 60 : 17 * 60;
+          return min >= start && min < end;
+        }
+        return min >= 7 * 60 && min < 16 * 60;
+      }
+
+      function rPathX(x1, y1, x2, y2, midX) {
+        if (y1 === y2) return `M ${x1},${y1} L ${x2},${y2}`;
+        const r = Math.min(
+          12,
+          Math.abs(y2 - y1) / 2,
+          Math.abs(x2 - midX),
+          Math.abs(midX - x1),
+        );
+        const sy = Math.sign(y2 - y1);
+        const sweep1 = sy > 0 ? 1 : 0;
+        const sweep2 = sy > 0 ? 0 : 1;
+        return `M ${x1},${y1} L ${midX - r},${y1} A ${r} ${r} 0 0 ${sweep1} ${midX},${y1 + r * sy} L ${midX},${y2 - r * sy} A ${r} ${r} 0 0 ${sweep2} ${midX + r},${y2} L ${x2},${y2}`;
+      }
+
+      function initializeDiagram() {
+        buildTimeButtons();
+        buildSvgNodes();
+        buildSvgConnectors();
+        setupEventHandlers();
+        updateMenuButtons();
+        updateBtnGroup("mode", `mode-${currentMode}`);
+        updateBtnGroup("origin", `origin-${currentOrigin}`);
+        updateBtnGroup("time", `time-${currentTime}`);
+        updateScenario();
+      }
+
+      function buildTimeButtons() {
+        document.getElementById("preset-list").innerHTML = Object.entries(
+          timePresets,
+        )
+          .map(
+            ([key, p]) =>
+              `<button id="time-${key}" class="scenario-button w-full bg-slate-100 text-slate-700 py-1.5 px-4 rounded-lg font-medium text-left text-sm">${p.label}</button>`,
+          )
+          .join("");
+      }
+
+      function buildSvgNodes() {
+        let n = "";
+        Object.entries(sites).forEach(([key, s]) => {
+          const y = ROWS[key] - 40;
+          const did = currentMode === "staging" ? s.testDid : s.liveDid;
+          n += createNode("phone", `node-in-${key}`, X_IN, y, s.name, did, W_STD);
+          n += createNode(
+            "server",
+            `node-rt-${key}`,
+            X_RT,
+            y,
+            `${s.prefix} Route`,
+            `ext. ${s.route}`,
+            W_STD,
+          );
+          n += createNode(
+            "clock",
+            `node-tf-${key}`,
+            X_TF,
+            y,
+            s.timeframe,
+            s.tfHours,
+            W_STD,
+          );
+          n += createNode(
+            "menu",
+            `node-aa-${key}`,
+            X_AA,
+            y,
+            s.aaTitle,
+            `ext. ${s.aa}`,
+            W_MENU,
+          );
+          n += createDestinationNode(
+            `node-q-${key}`,
+            X_DEST,
+            y,
+            `${s.queueName} (${s.queue})`,
+            [
+              `Order 1: ${s.primary.join(", ")}`,
+              `Order 2 (+90s): ${s.failover.join(", ")}`,
+            ],
+            W_DEST,
+          );
+        });
+        n += createNode(
+          "server",
+          "node-main-router",
+          X_AA,
+          Y_ROW4 - 40,
+          "Main Routing User",
+          "ext. 8903",
+          W_MENU,
+        );
+        n += createDestinationNode(
+          "node-afterhours",
+          X_DEST,
+          Y_ROW4 - 40,
+          "After-Hours AA (8163)",
+          "Press 1 for on-call provider",
+          W_DEST,
+        );
+        n += createDestinationNode(
+          "node-oncall",
+          X_DEST,
+          Y_ROW5 - 40,
+          "On-Call Provider",
+          "External on-call number",
+          W_DEST,
+        );
+        nodesGroup.innerHTML = n;
+      }
+
+      function buildSvgConnectors() {
+        const midX = { br: 565, so: 575, et: 585 };
+        const paths = {};
+        Object.keys(sites).forEach((key) => {
+          const y = ROWS[key];
+          paths[`conn-in-rt-${key}`] =
+            `M ${X_IN + W_STD},${y} L ${X_RT},${y}`;
+          paths[`conn-rt-tf-${key}`] =
+            `M ${X_RT + W_STD},${y} L ${X_TF},${y}`;
+          paths[`conn-tf-aa-${key}`] =
+            `M ${X_TF + W_STD},${y} L ${X_AA},${y}`;
+          paths[`conn-tf-main-${key}`] = rPathX(
+            X_TF + W_STD,
+            y,
+            X_AA,
+            Y_ROW4,
+            midX[key],
+          );
+          paths[`conn-aa-q-${key}`] =
+            `M ${X_AA + W_MENU},${y} L ${X_DEST},${y}`;
+        });
+        paths["conn-main-afterhours"] =
+          `M ${X_AA + W_MENU},${Y_ROW4} L ${X_DEST},${Y_ROW4}`;
+        const cx = X_DEST + W_DEST / 2;
+        paths["conn-afterhours-oncall"] =
+          `M ${cx},${Y_ROW4 + 40} L ${cx},${Y_ROW5 - 40}`;
+
+        let c = "";
+        for (const [id, d] of Object.entries(paths)) {
+          c += `<path id="${id}" d="${d}" class="flow-connector inactive" />`;
+        }
+        connectorsGroup.innerHTML = c;
+      }
+
+      function createNode(type, id, x, y, title, subtitle, width) {
+        const labelX = type === "menu" ? x + 50 : x + 56;
+        const icons = {
+          phone:
+            "M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z",
+          clock: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z",
+          server:
+            "M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01",
+          menu: "M4 6h16M4 12h16M4 18h16",
+        };
+        return `<g id="${id}" class="flow-node inactive"><rect x="${x}" y="${y}" width="${width}" height="80" rx="12" class="node-bg" /><circle cx="${x + 28}" cy="${y + 40}" r="18" fill="#eef2ff" /><path d="${icons[type]}" class="node-icon" transform="translate(${x + 18}, ${y + 30}) scale(0.8)" /><text x="${labelX}" y="${y + 35}" class="${type === "menu" ? "node-title menu-title" : "node-title"}">${title}</text><text x="${labelX}" y="${y + 55}" class="${type === "menu" ? "node-subtitle menu-subtitle" : "node-subtitle"}">${subtitle}</text></g>`;
+      }
+
+      function createDestinationNode(id, x, y, title, subtitle, w) {
+        const lines = Array.isArray(subtitle) ? subtitle : [subtitle];
+        const cx = x + w / 2;
+        let subtitleSvg;
+        if (lines.length === 1) {
+          subtitleSvg = `<text x="${cx}" y="${y + 50}" text-anchor="middle" class="node-subtitle destination-sub">${lines[0]}</text>`;
+        } else {
+          const spans = lines
+            .map(
+              (line, i) =>
+                `<tspan x="${cx}" dy="${i === 0 ? 0 : 14}">${line}</tspan>`,
+            )
+            .join("");
+          subtitleSvg = `<text x="${cx}" y="${y + 45}" text-anchor="middle" class="node-subtitle destination-sub">${spans}</text>`;
+        }
+        return `<g id="${id}" class="flow-node inactive"><rect x="${x}" y="${y}" width="${w}" height="80" rx="12" class="node-bg" /><text x="${cx}" y="${y + 28}" text-anchor="middle" class="node-title">${title}</text>${subtitleSvg}</g>`;
+      }
+
+      function bringToFront(id) {
+        const el = document.getElementById(id);
+        if (el && el.parentNode) el.parentNode.appendChild(el);
+      }
+
+      function isCurrentlyOpen() {
+        const p = timePresets[currentTime];
+        return siteOpen(currentOrigin, p.day, p.min);
+      }
+
+      function updateScenario() {
+        document
+          .querySelectorAll(".flow-node, .flow-connector")
+          .forEach(
+            (el) =>
+              (el.className.baseVal =
+                el.tagName === "g"
+                  ? "flow-node inactive"
+                  : "flow-connector inactive"),
+          );
+        const path = calculatePath();
+
+        path.nodes.forEach((id) => {
+          const el = document.getElementById(id);
+          if (el) {
+            el.className.baseVal = "flow-node highlighted";
+            bringToFront(id);
+          }
+        });
+        path.connectors.forEach((id) => {
+          const el = document.getElementById(id);
+          if (el) {
+            el.className.baseVal = "flow-connector highlighted";
+            bringToFront(id);
+          }
+        });
+        path.availableOptions.forEach((opt) => {
+          const d = document.getElementById(opt.dest);
+          const c = document.getElementById(opt.conn);
+          if (d) d.className.baseVal = "flow-node node-available";
+          if (c) c.className.baseVal = "flow-connector connector-available";
+        });
+        if (path.finalDestination)
+          document
+            .getElementById(path.finalDestination)
+            ?.classList.add("pulse-highlight");
+        updateDescriptions(path);
+      }
+
+      function calculatePath() {
+        const k = currentOrigin;
+        const path = {
+          nodes: [`node-in-${k}`, `node-rt-${k}`, `node-tf-${k}`],
+          connectors: [`conn-in-rt-${k}`, `conn-rt-tf-${k}`],
+          availableOptions: [],
+          finalDestination: null,
+        };
+
+        let routes;
+        if (isCurrentlyOpen()) {
+          path.nodes.push(`node-aa-${k}`);
+          path.connectors.push(`conn-tf-aa-${k}`);
+          const toQueue = { dest: `node-q-${k}`, conn: `conn-aa-q-${k}` };
+          routes = { 4: toQueue, 5: toQueue, timeout: toQueue };
+        } else {
+          path.nodes.push("node-main-router", "node-afterhours");
+          path.connectors.push(`conn-tf-main-${k}`, "conn-main-afterhours");
+          routes = {
+            1: { dest: "node-oncall", conn: "conn-afterhours-oncall" },
+          };
+        }
+
+        if (currentMenuSelection && routes[currentMenuSelection]) {
+          const r = routes[currentMenuSelection];
+          path.finalDestination = r.dest;
+          path.nodes.push(r.dest);
+          path.connectors.push(r.conn);
+        } else if (!currentMenuSelection) {
+          const seen = new Set();
+          path.availableOptions = Object.values(routes).filter((r) => {
+            if (seen.has(r.dest)) return false;
+            seen.add(r.dest);
+            return true;
+          });
+        }
+        return path;
+      }
+
+      function updateDescriptions(path) {
+        const s = sites[currentOrigin];
+        const p = timePresets[currentTime];
+        const open = isCurrentlyOpen();
+        const did = currentMode === "staging" ? s.testDid : s.liveDid;
+        const prefix = currentMode === "staging" ? "TEST-" : `${s.prefix}-`;
+
+        let html = `<p><span class="text-indigo-500 font-medium">Origin:</span> ${s.name} (${did})</p>`;
+        html += `<p><span class="text-indigo-500 font-medium">Caller ID Prefix:</span> ${prefix}${currentMode === "staging" ? " (internal test call)" : ""}</p>`;
+        html += `<p><span class="text-indigo-500 font-medium">When:</span> ${p.label} CT</p>`;
+        html += `<p><span class="text-indigo-500 font-medium">Route user ${s.route}:</span> "${s.timeframe}" ${open ? "matches. Forward Always to AA " + s.aa + "." : "does not match. Default rule forwards to User 8903, then AA 8163."}</p>`;
+
+        let target = "";
+        if (path.finalDestination === `node-q-${currentOrigin}`) {
+          target = `Rings ${s.primary.map((e) => `${e} ${people[e]}`).join(", ")} for 90s, then adds ${s.failover.map((e) => `${e} ${people[e]}`).join(" + ")}. No other clinic rings. Unanswered callers stay in queue (no voicemail).`;
+        } else if (path.finalDestination === "node-oncall") {
+          target = "Transfers to the on-call provider.";
+        }
+
+        if (path.finalDestination) {
+          let destName = document.querySelector(
+            `#${path.finalDestination} .node-title`,
+          ).textContent;
+          if (currentMenuSelection === "4") destName += " (after refill tier)";
+          if (currentMenuSelection === "5")
+            destName += " (after clinic info tier)";
+          html += `<div class="mt-4 pt-3 border-t border-indigo-200"><span class="text-indigo-500 font-medium">Target Destination:</span><br/><span class="font-bold text-indigo-900 text-base">${destName}</span><br/><span class="text-sm text-indigo-700 mt-1 block">${target}</span></div>`;
+        } else if (!open && currentMenuSelection === "timeout") {
+          html += `<div class="mt-4 pt-3 border-t border-indigo-200 text-indigo-700">No input: After-Hours menu repeats.</div>`;
+        } else {
+          html += `<div class="mt-4 pt-3 border-t border-indigo-200 text-indigo-400 italic">Awaiting menu selection...</div>`;
+        }
+        scenarioInfo.innerHTML = html;
+
+        let statusHtml = Object.entries(sites)
+          .map(([key, site]) => {
+            const o = siteOpen(key, p.day, p.min);
+            return `<p>${o ? "🟢" : "⚫"} ${site.name}: ${o ? '<span class="text-slate-700">Open</span>' : '<span class="text-slate-500">Closed (After-Hours)</span>'}</p>`;
+          })
+          .join("");
+        statusHtml += `<div class="mt-3 pt-3 border-t border-amber-200"><p class="font-bold text-amber-900">${s.queueName} ring order</p>`;
+        statusHtml += `<p>Order 1: ${s.primary.map((e) => `${e} ${people[e]}`).join(", ")}</p>`;
+        statusHtml += `<p>Order 2 (+90s): ${s.failover.map((e) => `${e} ${people[e]}`).join(", ")}</p></div>`;
+        statusInfo.innerHTML = statusHtml;
+      }
+
+      function setupEventHandlers() {
+        document.querySelectorAll('[id^="mode-"]').forEach((btn) =>
+          btn.addEventListener("click", () => {
+            currentMode = btn.id.split("-")[1];
+            updateBtnGroup("mode", btn.id);
+            buildSvgNodes();
+            updateScenario();
+          }),
+        );
+        document.querySelectorAll('[id^="origin-"]').forEach((btn) =>
+          btn.addEventListener("click", () => {
+            currentOrigin = btn.id.split("-")[1];
+            currentMenuSelection = null;
+            updateBtnGroup("origin", btn.id);
+            updateBtnGroup("menu", null);
+            updateMenuButtons();
+            updateScenario();
+          }),
+        );
+        document.querySelectorAll('[id^="time-"]').forEach((btn) =>
+          btn.addEventListener("click", () => {
+            currentTime = btn.id.substring(5);
+            currentMenuSelection = null;
+            updateBtnGroup("time", btn.id);
+            updateBtnGroup("menu", null);
+            updateMenuButtons();
+            updateScenario();
+          }),
+        );
+        document.querySelectorAll('[id^="menu-"]').forEach((btn) =>
+          btn.addEventListener("click", () => {
+            if (btn.classList.contains("hidden")) return;
+            const selection = btn.id.split("-")[1];
+            currentMenuSelection =
+              currentMenuSelection === selection ? null : selection;
+            updateBtnGroup("menu", currentMenuSelection ? btn.id : null);
+            updateScenario();
+          }),
+        );
+      }
+
+      function updateBtnGroup(group, activeId) {
+        document
+          .querySelectorAll(`[id^="${group}-"]`)
+          .forEach((btn) =>
+            btn.classList.toggle("active", btn.id === activeId),
+          );
+      }
+
+      function updateMenuButtons() {
+        const conf = isCurrentlyOpen()
+          ? businessMenuOptions
+          : afterHoursMenuOptions;
+        Object.entries(conf).forEach(([id, cfg]) => {
+          const btn = document.getElementById(id);
+          if (btn) {
+            btn.textContent = cfg.label;
+            btn.classList.toggle("hidden", !cfg.visible);
+          }
+        });
+      }
+
+      document.addEventListener("DOMContentLoaded", initializeDiagram);
+    </script>
+  </body>
+</html>
